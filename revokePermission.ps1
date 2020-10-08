@@ -4,7 +4,7 @@ $auditMessage = " not revoked succesfully";
 
 $p = $person | ConvertFrom-Json;
 $m = $manager | ConvertFrom-Json;
-$aRef = $aRef = $accountReference;
+$aRef = $accountReference | ConvertFrom-Json;
 $mRef = $managerAccountReference | ConvertFrom-Json;
 $pRef = $permissionReference | ConvertFrom-json;
 
