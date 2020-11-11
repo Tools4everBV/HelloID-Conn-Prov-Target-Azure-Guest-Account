@@ -1,7 +1,10 @@
 # AzureAD Application Parameters #
-$AADtenantID = "<Provide your Tenant ID here>"
-$AADAppId = "<Provide your Client ID here>"
-$AADAppSecret = "<Provide your Client Secret here>"
+$config = ConvertFrom-Json $configuration
+
+$AADtenantDomain = $config.AADtenantDomain
+$AADtenantID = $config.AADtenantID
+$AADAppId = $config.AADAppId
+$AADAppSecret = $config.AADAppSecret
 
 # Enable TLS 1.2
 if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
@@ -50,18 +53,10 @@ try{
         $response = Invoke-RestMethod -Uri $patchUri -Method PATCH -Headers $authorization -Body $body -Verbose:$false
     }
     $success = $True;
-    $auditMessage = " successfully"; 
+    $auditMessage = " $($aRef) successfully"; 
 }catch{
-    if(-Not($_.Exception.Response -eq $null)){
-    $result = $_.Exception.Response.GetResponseStream()
-    $reader = New-Object System.IO.StreamReader($result)
-    $reader.BaseStream.Position = 0
-    $reader.DiscardBufferedData()
-    $errResponse = $reader.ReadToEnd();
-    $auditMessage = " : ${errResponse}";
-    }else {
-    $auditMessage = " : General error";
-    } 
+    $errResponse = $_;
+    $auditMessage = " $($aRef) : ${errResponse}";
 }
 
 #build up result

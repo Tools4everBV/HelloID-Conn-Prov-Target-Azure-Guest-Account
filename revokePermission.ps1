@@ -1,3 +1,10 @@
+# AzureAD Application Parameters #
+$config = ConvertFrom-Json $configuration
+
+$AADtenantID = $config.AADtenantID
+$AADAppId = $config.AADAppId
+$AADAppSecret = $config.AADAppSecret
+
 #Initialize default properties
 $success = $False;
 $auditMessage = " not revoked succesfully";
@@ -7,11 +14,6 @@ $m = $manager | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
 $mRef = $managerAccountReference | ConvertFrom-Json;
 $pRef = $permissionReference | ConvertFrom-json;
-
-# AzureAD Application Parameters #
-$AADtenantID = "<Provide your Tenant ID here>"
-$AADAppId = "<Provide your Client ID here>"
-$AADAppSecret = "<Provide your Client Secret here>"
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
@@ -50,13 +52,6 @@ if(-Not($dryRun -eq $True)) {
         $success = $True;
         $auditMessage = "AzureAD user [$($aRef)]"
     } catch {
-        <#
-        $result = $_.Exception.Response.GetResponseStream()
-        $reader = New-Object System.IO.StreamReader($result)
-        $reader.BaseStream.Position = 0
-        $reader.DiscardBufferedData()
-        $errResponse = $reader.ReadToEnd();
-        #>
         $errResponse = $_;
         if($errResponse -like "*Resource '$($pRef.id)' does not exist or one of its queried reference-property objects are not present*"){
             $success = $True;

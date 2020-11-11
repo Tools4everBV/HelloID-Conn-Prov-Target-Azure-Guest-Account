@@ -9,7 +9,11 @@
   * [Authentication and Authorization](#authentication-and-authorization)
 
 ## Introduction
--
+The interface to communicate with Microsoft Azure AD is through the Microsoft Graph API. GetConnectors are based on a pre-defined 'data collection', which is an existing view based on the data inside the Profit database.
+
+For this connector we have create the Guest accounts by sending an invitation, this way they can log on with their invited email address.
+
+If you want to create Guest accounts directly (with a logon name of the tenant domain itself), please use the built-in Microsoft Azure Active Directory target system. By specifying the userType 'Guest' in the mapping you can create Guest accounts with a logon name of the tenant domain.
 
 <!-- GETTING STARTED -->
 ## Getting the Azure AD graph API access
