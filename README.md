@@ -59,3 +59,6 @@ There are multiple ways to authenticate to the Graph API with each has its own p
 *	Provide a logical name for your secret in the Description field, and select the expiration date for your secret.
 *	It's IMPORTANT to copy the newly generated client secret, because you cannot see the value anymore after you close the page.
 *	At least we need to get is the <b>Tenant ID</b>. This can be found in the Azure Portal by going to <b>Azure Active Directory > Custom Domain Names</b>, and then finding the .onmicrosoft.com domain.
+
+# HelloID Docs
+The official HelloID documentation can be found at: https://docs.helloid.com/
