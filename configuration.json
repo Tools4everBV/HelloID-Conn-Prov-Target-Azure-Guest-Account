@@ -1,46 +1,45 @@
 [
-    {
-      "key": "AADtenantDomain",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Azure AD Tenant Domain",
-        "placeholder": "enyoi.onmicrosoft.com",
-        "description": "",
-        "required": true
-      }
-    },
-    {
-      "key": "AADtenantID",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Azure AD Tenant ID",
-        "placeholder": "615g75e2-0v74-4a3c-6gaf-241t1q4m7f54",
-        "description": "",
-        "required": true
-      }
-    },
-    {
-      "key": "AADAppId",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Azure AD App ID",
-        "placeholder": "9c12a9b1-34c5-678d-ac34-8a890100d46d",
-        "description": "",
-        "required": true
-      }
-    },
-    {
-      "key": "AADAppSecret",
-      "type": "input",
-      "defaultValue": "",
-      "templateOptions": {
-        "label": "Azure AD App Secret",
-        "type": "password",
-        "placeholder": "3lib1234NwDvx.6abc98M._r0yz_7h_B34",
-        "required": true
-      }
+  {
+    "key": "AADtenantID",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Azure AD Tenant ID",
+      "placeholder": "615g75e2-0v74-4a3c-6gaf-241t1q4m7f54",
+      "description": "",
+      "required": true
     }
-  ]
+  },
+  {
+    "key": "AADAppId",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Azure AD App ID",
+      "placeholder": "9c12a9b1-34c5-678d-ac34-8a890100d46d",
+      "description": "",
+      "required": true
+    }
+  },
+  {
+    "key": "AADAppSecret",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Azure AD App Secret",
+      "type": "password",
+      "placeholder": "3lib1234NwDvx.6abc98M._r0yz_7h_B34",
+      "required": true
+    }
+  },
+  {
+    "key": "isDebug",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Toggle debug logging",
+      "description": "When toggled, debug logging will be displayed",
+      "required": false
+    }
+  }
+]
