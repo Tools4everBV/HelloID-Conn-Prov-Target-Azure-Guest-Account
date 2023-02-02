@@ -1,16 +1,19 @@
 #####################################################
-# HelloID-Conn-Prov-Target-Azure-Guest-Account-Delete
+# HelloID-Conn-Prov-Target-Azure-Guest-Permissions-GrantPermission-Group
 #
 # Version: 1.1.0
 #####################################################
 # Initialize default values
 $c = $configuration | ConvertFrom-Json
 $p = $person | ConvertFrom-Json
-$success = $false
+$success = $false # Set to false at start, at the end, only when no error occurs it is set to true
 $auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
 
 # The accountReference object contains the Identification object provided in the create account call
 $aRef = $accountReference | ConvertFrom-Json
+
+# The permissionReference object contains the Identification object provided in the retrieve permissions call
+$pRef = $permissionReference | ConvertFrom-Json
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
@@ -23,7 +26,7 @@ switch ($($c.isDebug)) {
 $InformationPreference = "Continue"
 $WarningPreference = "Continue"
 
-# Used to connect to Azure AD using Microsoft Graph
+# Used to connect to Azure AD Graph API
 $AADtenantID = $c.AADtenantID
 $AADAppId = $c.AADAppId
 $AADAppSecret = $c.AADAppSecret
@@ -38,6 +41,7 @@ if ([String]::IsNullOrEmpty($aRef)) {
 #region functions
 function New-AuthorizationHeaders {
     [CmdletBinding()]
+    [OutputType([System.Collections.Generic.Dictionary[[String], [String]]])]
     param(
         [parameter(Mandatory)]
         [string]
@@ -76,10 +80,10 @@ function New-AuthorizationHeaders {
         # Needed to filter on specific attributes (https://docs.microsoft.com/en-us/graph/aad-advanced-queries)
         $headers.Add('ConsistencyLevel', 'eventual')
 
-        Write-Output $headers
+        Write-Output $headers  
     }
     catch {
-        throw $_
+        $PSCmdlet.ThrowTerminatingError($_)
     }
 }
 
@@ -152,25 +156,13 @@ try {
     if ($aRefMissing -eq $true) {
         if (-not($dryRun -eq $true)) {
             $auditLogs.Add([PSCustomObject]@{
-                    # Action  = "DeleteAccount" # Optional
-                    Message = "aRef incomplete, cannot delete account"
+                    # Action  = "GrantPermission" # Optional
+                    Message = "aRef incomplete, cannot revoke permission"
                     IsError = $true
                 })
         }
         else {
-            Write-Warning "DryRun: aRef incomplete, cannot delete account. aRef object: $($aRef | ConvertTo-Json -Depth 10)" 
-        }
-    }
-    elseif ($incompleteAccount -eq $true) {
-        if (-not($dryRun -eq $true)) {
-            $auditLogs.Add([PSCustomObject]@{
-                    # Action  = "DeleteAccount" # Optional
-                    Message = "Account object incomplete, cannot delete account"
-                    IsError = $true
-                })
-        }
-        else {
-            Write-Warning "DryRun: Account object incomplete, cannot delete account. Account object: $($account | ConvertTo-Json -Depth 10)" 
+            Write-Warning "DryRun: aRef incomplete, cannot revoke permission. aRef object: $($aRef | ConvertTo-Json -Depth 10)" 
         }
     }
     else {
@@ -220,46 +212,40 @@ try {
 
             Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"
 
-            if ($auditErrorMessage -Like "No account found in Azure AD with id '$($aRef)'" -or ($auditErrorMessage -like "*Error code: Request_ResourceNotFound*" -and $auditErrorMessage -like "*$($aRef)*") ) {
-                $auditLogs.Add([PSCustomObject]@{
-                        # Action  = "DeleteAccount" # Optional
-                        Message = "No Azure AD account found with id '$($aRef)'. Possibly already deleted, skipping action."
-                        IsError = $false
-                    })
-            }
-            else {
-                $auditLogs.Add([PSCustomObject]@{
-                        # Action  = "DeleteAccount" # Optional
-                        Message = "Error querying Azure AD account with id '$($aRef)'. Error Message: $auditErrorMessage"
-                        IsError = $true
-                    })
-            }
+            $auditLogs.Add([PSCustomObject]@{
+                    # Action  = "GrantPermission" # Optional
+                    Message = "Error querying Azure AD account with id '$($aRef)'. Error Message: $auditErrorMessage"
+                    IsError = $true
+                })
         }
 
         if (-NOT($auditLogs.IsError -contains $true)) {
-            # Delete Azure AD account
+            # Grant AzureAD Groupmembership
             try {
-                $baseUri = "https://graph.microsoft.com/"
-                $splatWebRequest = @{
-                    Uri     = "$baseUri/v1.0/users/$($currentAccount.id)"
-                    Headers = $headers
-                    Method  = 'DELETE'
+                Write-Verbose "Granting permission to Group '$($pRef.Name) ($($pRef.id))' for account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'"
+
+                $bodyAddPermission = [PSCustomObject]@{
+                    "@odata.id" = "https://graph.microsoft.com/v1.0/users/$($aRef)"
                 }
+                $body = ($bodyAddPermission | ConvertTo-Json -Depth 10)
 
+                $splatWebRequest = @{
+                    Uri     = "$baseUri/v1.0/groups/$($pRef.id)/members/`$ref"
+                    Headers = $headers
+                    Method  = 'POST'
+                    Body    = ([System.Text.Encoding]::UTF8.GetBytes($body))
+                }
+                
                 if (-not($dryRun -eq $true)) {
-                    Write-Verbose "Deleting Azure AD account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'"
-
-                    $deleteAccountResponse = $null
-                    $deleteAccountResponse = Invoke-RestMethod @splatWebRequest -Verbose:$false
-
+                    $addPermission = Invoke-RestMethod @splatWebRequest -Verbose:$false
                     $auditLogs.Add([PSCustomObject]@{
-                            # Action  = "DeleteAccount" # Optional
-                            Message = "Successfully deleted Azure AD account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'"
+                            Action  = "GrantPermission"
+                            Message = "Successfully granted permission to Group '$($pRef.Name) ($($pRef.id))' for account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'"
                             IsError = $false
                         })
                 }
                 else {
-                    Write-Warning "DryRun: Would delete Azure AD account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'"
+                    Write-Warning "DryRun: Would grant permission to Group '$($pRef.Name) ($($pRef.id))' for account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'"
                 }
             }
             catch {
@@ -270,12 +256,12 @@ try {
                 $ex = $PSItem
                 if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
                     $errorObject = Resolve-HTTPError -Error $ex
-
+            
                     $verboseErrorMessage = $errorObject.ErrorMessage
-
+            
                     $auditErrorMessage = Resolve-MicrosoftGraphAPIErrorMessage -ErrorObject $errorObject.ErrorMessage
                 }
-
+            
                 # If error message empty, fall back on $ex.Exception.Message
                 if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
                     $verboseErrorMessage = $ex.Exception.Message
@@ -283,14 +269,26 @@ try {
                 if ([String]::IsNullOrEmpty($auditErrorMessage)) {
                     $auditErrorMessage = $ex.Exception.Message
                 }
-
+            
                 Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"
-
-                $auditLogs.Add([PSCustomObject]@{
-                        # Action  = "DeleteAccount" # Optional
-                        Message = "Error deleting Azure AD account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'. Error Message: $auditErrorMessage"
-                        IsError = $true
-                    })
+                
+                # Since the error message for adding a user that is already member is a 400 (bad request), we cannot check on a code or type
+                # this may result in an incorrect check when the error messages are in any other language than english, please change this accordingly
+                if ($auditErrorMessage -like "*One or more added object references already exist for the following modified properties*") {
+                    $auditLogs.Add([PSCustomObject]@{
+                            Action  = "GrantPermission"
+                            Message = "User '$($currentAccount.userPrincipalName)' is already a member of the group '$($pRef.Name)'. Skipped grant of permission to group '$($pRef.Name) ($($pRef.id))' for user '$($currentAccount.userPrincipalName) ($($currentAccount.id))'"
+                            IsError = $false
+                        }
+                    )
+                }
+                else {
+                    $auditLogs.Add([PSCustomObject]@{
+                            Action  = "GrantPermission"
+                            Message = "Error granting permission to Group '$($pRef.Name) ($($pRef.id))' for account '$($currentAccount.userPrincipalName) ($($currentAccount.id))'. Error Message: $auditErrorMessage"
+                            IsError = $true
+                        })
+                }
             }
         }
     }
@@ -303,14 +301,9 @@ finally {
 
     # Send results
     $result = [PSCustomObject]@{
-        Success          = $success
-        AccountReference = $aRef
-        AuditLogs        = $auditLogs
-        Account          = $account
-
-        # Optionally return data for use in other systems
-        # ExportData       = $exportData # There is no data left after the delete
+        Success   = $success
+        AuditLogs = $auditLogs
     }
 
-    Write-Output ($result | ConvertTo-Json -Depth 10)  
+    Write-Output ($result | ConvertTo-Json -Depth 10)
 }
