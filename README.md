@@ -6,7 +6,7 @@
 <br />
 <p align="center">
   <img src="https://www.tools4ever.nl/connector-logos/azureactivedirectory-logo.png">
-</p>
+</p> 
 
 ## Versioning
 | Version | Description | Date |
